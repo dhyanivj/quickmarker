@@ -45,7 +45,7 @@ function CodeEditor({ value, onChange, placeholder, readOnly = false, wrap = fal
     <div className="flex border border-neutral-200 dark:border-neutral-800 rounded-md bg-neutral-50 dark:bg-[#0a0a0a] font-mono text-sm leading-6 overflow-hidden h-72 md:h-96 relative">
       {/* Line Numbers */}
       {!wrap && (
-        <div 
+        <div
           ref={lineNumbersRef}
           className="select-none text-right pr-3 pl-2 py-3 bg-neutral-100/50 dark:bg-[#030303]/50 text-neutral-400 dark:text-neutral-600 border-r border-neutral-200 dark:border-neutral-800 text-xs min-w-[2.5rem] overflow-y-hidden scrollbar-none"
           style={{ scrollbarWidth: 'none' }}
@@ -65,9 +65,8 @@ function CodeEditor({ value, onChange, placeholder, readOnly = false, wrap = fal
         readOnly={readOnly}
         spellCheck={false}
         wrap={wrap ? "on" : "off"}
-        className={`flex-1 p-3 bg-transparent text-neutral-900 dark:text-neutral-100 outline-none resize-none font-mono text-sm leading-6 h-full min-w-0 ${
-          wrap ? "whitespace-pre-wrap overflow-y-auto" : "whitespace-pre overflow-auto"
-        }`}
+        className={`flex-1 p-3 bg-transparent text-neutral-900 dark:text-neutral-100 outline-none resize-none font-mono text-sm leading-6 h-full min-w-0 ${wrap ? "whitespace-pre-wrap overflow-y-auto" : "whitespace-pre overflow-auto"
+          }`}
       />
     </div>
   );
@@ -135,9 +134,10 @@ function calculateDiff(oldStr: string, newStr: string): DiffChange[] {
 interface DiffViewerProps {
   oldCode: string;
   newCode: string;
+  wrap?: boolean;
 }
 
-function DiffViewer({ oldCode, newCode }: DiffViewerProps) {
+function DiffViewer({ oldCode, newCode, wrap = false }: DiffViewerProps) {
   const diffs = calculateDiff(oldCode, newCode);
 
   return (
@@ -151,7 +151,7 @@ function DiffViewer({ oldCode, newCode }: DiffViewerProps) {
         </div>
       </div>
       {/* Diff Content */}
-      <div className="flex-1 overflow-auto p-3 whitespace-pre select-text">
+      <div className={`flex-1 p-3 select-text ${wrap ? "overflow-y-auto" : "overflow-auto"}`}>
         <table className="w-full border-collapse">
           <tbody>
             {diffs.map((diff, index) => {
@@ -173,20 +173,20 @@ function DiffViewer({ oldCode, newCode }: DiffViewerProps) {
               }
 
               return (
-                <tr key={index} className={`h-6 ${rowBg} hover:bg-neutral-200/20 dark:hover:bg-neutral-800/20 transition-colors`}>
+                <tr key={index} className={`min-h-[1.5rem] ${rowBg} hover:bg-neutral-200/20 dark:hover:bg-neutral-800/20 transition-colors`}>
                   {/* Line Number Columns */}
-                  <td className="w-10 text-right pr-3 select-none text-neutral-400 dark:text-neutral-600 text-xs border-r border-neutral-200 dark:border-neutral-800 pl-1">
+                  <td className="w-10 text-right pr-3 select-none text-neutral-400 dark:text-neutral-600 text-xs border-r border-neutral-200 dark:border-neutral-800 pl-1 align-top pt-0.5">
                     {diff.oldLineNum || ''}
                   </td>
-                  <td className="w-10 text-right pr-3 select-none text-neutral-400 dark:text-neutral-600 text-xs border-r border-neutral-200 dark:border-neutral-800 pl-1">
+                  <td className="w-10 text-right pr-3 select-none text-neutral-400 dark:text-neutral-600 text-xs border-r border-neutral-200 dark:border-neutral-800 pl-1 align-top pt-0.5">
                     {diff.newLineNum || ''}
                   </td>
                   {/* Prefix Column */}
-                  <td className={`w-6 text-center select-none font-bold text-sm ${prefixColor}`}>
+                  <td className={`w-6 text-center select-none font-bold text-sm align-top pt-0.5 ${prefixColor}`}>
                     {prefix}
                   </td>
                   {/* Code Line Column */}
-                  <td className={`pl-2 font-mono text-sm leading-6 align-middle ${textColor}`}>
+                  <td className={`pl-2 font-mono text-sm leading-6 align-middle ${textColor} ${wrap ? "whitespace-pre-wrap break-all" : "whitespace-pre"}`}>
                     {diff.value || ' '}
                   </td>
                 </tr>
@@ -226,6 +226,7 @@ export default function Home() {
   const [modifierModifiedCode, setModifierModifiedCode] = useState('');
   const [modifierLoading, setModifierLoading] = useState(false);
   const [modifierError, setModifierError] = useState('');
+  const [wrapModifier, setWrapModifier] = useState(true);
 
   // Tab 3: FreeMarker Auditor & Linter States
   const [auditCode, setAuditCode] = useState('');
@@ -592,7 +593,7 @@ export default function Home() {
                 <Sparkles className="w-5 h-5 text-neutral-400 dark:text-neutral-600" />
               </h2>
               <p className="text-sm text-neutral-500 mt-1">
-                Generate error-free Apache FreeMarker template code using natural language requests.
+                Generate error-free FreeMarker code using natural language requests.
               </p>
             </div>
 
@@ -709,11 +710,10 @@ export default function Home() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setWrapOutput(!wrapOutput)}
-                      className={`flex items-center gap-1.5 px-2 py-1 text-xs border rounded-md transition-all duration-200 active:scale-95 hover:-translate-y-0.5 ${
-                        wrapOutput
-                          ? 'bg-neutral-900 border-neutral-900 text-white dark:bg-white dark:border-white dark:text-black font-medium'
-                          : 'border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-950 text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200'
-                      }`}
+                      className={`flex items-center gap-1.5 px-2 py-1 text-xs border rounded-md transition-all duration-200 active:scale-95 hover:-translate-y-0.5 ${wrapOutput
+                        ? 'bg-neutral-900 border-neutral-900 text-white dark:bg-white dark:border-white dark:text-black font-medium'
+                        : 'border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-950 text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200'
+                        }`}
                     >
                       Wrap Text
                     </button>
@@ -816,13 +816,26 @@ export default function Home() {
               {/* Left Side: Original Code & Instructions */}
               <div className="space-y-4">
                 <div className="flex flex-col gap-1.5">
-                  <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                    Original FreeMarker Code
-                  </span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                      Original FreeMarker Code
+                    </span>
+                    <button
+                      onClick={() => setWrapModifier(!wrapModifier)}
+                      className={`flex items-center gap-1.5 px-2 py-0.5 text-[10px] border rounded transition-all duration-200 active:scale-95 ${
+                        wrapModifier
+                          ? 'bg-neutral-900 border-neutral-900 text-white dark:bg-white dark:border-white dark:text-black font-medium'
+                          : 'border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-950 text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200'
+                      }`}
+                    >
+                      Wrap
+                    </button>
+                  </div>
                   <CodeEditor
                     value={modifierOriginalCode}
                     onChange={setModifierOriginalCode}
                     placeholder={`Paste existing FreeMarker code here...`}
+                    wrap={wrapModifier}
                   />
                 </div>
 
@@ -875,28 +888,41 @@ export default function Home() {
                     Modified Output Diffs
                   </span>
 
-                  {modifierModifiedCode && (
+                  <div className="flex items-center gap-2">
                     <button
-                      onClick={() => copyToClipboard(modifierModifiedCode, 'modifier-output')}
-                      className="flex items-center gap-1.5 px-2 py-1 text-xs border border-neutral-200 dark:border-neutral-800 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-950 transition-all duration-200 text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200 active:scale-95 hover:-translate-y-0.5"
+                      onClick={() => setWrapModifier(!wrapModifier)}
+                      className={`flex items-center gap-1.5 px-2 py-1 text-xs border rounded-md transition-all duration-200 active:scale-95 hover:-translate-y-0.5 ${
+                        wrapModifier
+                          ? 'bg-neutral-900 border-neutral-900 text-white dark:bg-white dark:border-white dark:text-black font-medium'
+                          : 'border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-950 text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200'
+                      }`}
                     >
-                      {copiedId === 'modifier-output' ? (
-                        <>
-                          <Check className="w-3.5 h-3.5 text-green-500" />
-                          Copied!
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3.5 h-3.5" />
-                          Copy Modified Code
-                        </>
-                      )}
+                      Wrap Text
                     </button>
-                  )}
+
+                    {modifierModifiedCode && (
+                      <button
+                        onClick={() => copyToClipboard(modifierModifiedCode, 'modifier-output')}
+                        className="flex items-center gap-1.5 px-2 py-1 text-xs border border-neutral-200 dark:border-neutral-800 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-950 transition-all duration-200 text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200 active:scale-95 hover:-translate-y-0.5"
+                      >
+                        {copiedId === 'modifier-output' ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-green-500" />
+                            Copied!
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5" />
+                            Copy Modified Code
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {modifierModifiedCode ? (
-                  <DiffViewer oldCode={modifierOriginalCode} newCode={modifierModifiedCode} />
+                  <DiffViewer oldCode={modifierOriginalCode} newCode={modifierModifiedCode} wrap={wrapModifier} />
                 ) : (
                   <div className="h-[360px] md:h-[490px] border border-neutral-200 dark:border-neutral-800 rounded-md flex flex-col items-center justify-center text-neutral-400 dark:text-neutral-600 bg-neutral-50/20 dark:bg-neutral-950/20">
                     <Code2 className="w-8 h-8 mb-2 opacity-50" />
