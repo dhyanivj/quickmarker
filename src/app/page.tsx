@@ -25,9 +25,10 @@ interface CodeEditorProps {
   onChange: (val: string) => void;
   placeholder?: string;
   readOnly?: boolean;
+  wrap?: boolean;
 }
 
-function CodeEditor({ value, onChange, placeholder, readOnly = false }: CodeEditorProps) {
+function CodeEditor({ value, onChange, placeholder, readOnly = false, wrap = false }: CodeEditorProps) {
   const lineCount = value.split('\n').length || 1;
   const lines = Array.from({ length: lineCount }, (_, i) => i + 1);
 
@@ -43,15 +44,17 @@ function CodeEditor({ value, onChange, placeholder, readOnly = false }: CodeEdit
   return (
     <div className="flex border border-neutral-200 dark:border-neutral-800 rounded-md bg-neutral-50 dark:bg-[#0a0a0a] font-mono text-sm leading-6 overflow-hidden h-96 relative">
       {/* Line Numbers */}
-      <div
-        ref={lineNumbersRef}
-        className="select-none text-right pr-3 pl-2 py-3 bg-neutral-100/50 dark:bg-[#030303]/50 text-neutral-400 dark:text-neutral-600 border-r border-neutral-200 dark:border-neutral-800 text-xs min-w-[2.5rem] overflow-y-hidden scrollbar-none"
-        style={{ scrollbarWidth: 'none' }}
-      >
-        {lines.map((num) => (
-          <div key={num} className="h-6">{num}</div>
-        ))}
-      </div>
+      {!wrap && (
+        <div 
+          ref={lineNumbersRef}
+          className="select-none text-right pr-3 pl-2 py-3 bg-neutral-100/50 dark:bg-[#030303]/50 text-neutral-400 dark:text-neutral-600 border-r border-neutral-200 dark:border-neutral-800 text-xs min-w-[2.5rem] overflow-y-hidden scrollbar-none"
+          style={{ scrollbarWidth: 'none' }}
+        >
+          {lines.map((num) => (
+            <div key={num} className="h-6">{num}</div>
+          ))}
+        </div>
+      )}
       {/* Editor Content */}
       <textarea
         ref={textareaRef}
@@ -61,8 +64,10 @@ function CodeEditor({ value, onChange, placeholder, readOnly = false }: CodeEdit
         placeholder={placeholder}
         readOnly={readOnly}
         spellCheck={false}
-        wrap="off"
-        className="flex-1 p-3 bg-transparent text-neutral-900 dark:text-neutral-100 outline-none resize-none overflow-auto whitespace-pre font-mono text-sm leading-6 h-full"
+        wrap={wrap ? "on" : "off"}
+        className={`flex-1 p-3 bg-transparent text-neutral-900 dark:text-neutral-100 outline-none resize-none font-mono text-sm leading-6 h-full min-w-0 ${
+          wrap ? "whitespace-pre-wrap overflow-y-auto" : "whitespace-pre overflow-auto"
+        }`}
       />
     </div>
   );
@@ -213,6 +218,7 @@ export default function Home() {
   const [explanationText, setExplanationText] = useState('');
   const [generatorLoading, setGeneratorLoading] = useState(false);
   const [generatorError, setGeneratorError] = useState('');
+  const [wrapOutput, setWrapOutput] = useState(true);
 
   // Tab 2: Code Modifier States
   const [modifierOriginalCode, setModifierOriginalCode] = useState('');
@@ -686,29 +692,42 @@ export default function Home() {
                     Generated FreeMarker Output
                   </span>
 
-                  {generatedCode && (
+                  <div className="flex items-center gap-2">
                     <button
-                      onClick={() => copyToClipboard(generatedCode, 'gen-output')}
-                      className="flex items-center gap-1.5 px-2 py-1 text-xs border border-neutral-200 dark:border-neutral-800 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-950 transition-all text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200"
+                      onClick={() => setWrapOutput(!wrapOutput)}
+                      className={`flex items-center gap-1.5 px-2 py-1 text-xs border rounded-md transition-all ${
+                        wrapOutput
+                          ? 'bg-neutral-900 border-neutral-900 text-white dark:bg-white dark:border-white dark:text-black font-medium'
+                          : 'border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-950 text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200'
+                      }`}
                     >
-                      {copiedId === 'gen-output' ? (
-                        <>
-                          <Check className="w-3.5 h-3.5 text-green-500" />
-                          Copied!
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3.5 h-3.5" />
-                          Copy
-                        </>
-                      )}
+                      Wrap Text
                     </button>
-                  )}
+
+                    {generatedCode && (
+                      <button
+                        onClick={() => copyToClipboard(generatedCode, 'gen-output')}
+                        className="flex items-center gap-1.5 px-2 py-1 text-xs border border-neutral-200 dark:border-neutral-800 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-950 transition-all text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200"
+                      >
+                        {copiedId === 'gen-output' ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-green-500" />
+                            Copied!
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5" />
+                            Copy
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {generatedCode ? (
                   <div className="space-y-4">
-                    <CodeEditor value={generatedCode} onChange={setGeneratedCode} readOnly />
+                    <CodeEditor value={generatedCode} onChange={setGeneratedCode} readOnly wrap={wrapOutput} />
 
                     {/* Interactive Tag Explanation */}
                     {explanationText && (
