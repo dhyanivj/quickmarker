@@ -42,7 +42,7 @@ function CodeEditor({ value, onChange, placeholder, readOnly = false, wrap = fal
   };
 
   return (
-    <div className="flex border border-neutral-200 dark:border-neutral-800 rounded-md bg-neutral-50 dark:bg-[#0a0a0a] font-mono text-sm leading-6 overflow-hidden h-96 relative">
+    <div className="flex border border-neutral-200 dark:border-neutral-800 rounded-md bg-neutral-50 dark:bg-[#0a0a0a] font-mono text-sm leading-6 overflow-hidden h-72 md:h-96 relative">
       {/* Line Numbers */}
       {!wrap && (
         <div 
@@ -141,7 +141,7 @@ function DiffViewer({ oldCode, newCode }: DiffViewerProps) {
   const diffs = calculateDiff(oldCode, newCode);
 
   return (
-    <div className="border border-neutral-200 dark:border-neutral-800 rounded-md bg-neutral-50 dark:bg-[#0a0a0a] font-mono text-sm leading-6 overflow-hidden h-[490px] flex flex-col">
+    <div className="border border-neutral-200 dark:border-neutral-800 rounded-md bg-neutral-50 dark:bg-[#0a0a0a] font-mono text-sm leading-6 overflow-hidden h-[360px] md:h-[490px] flex flex-col">
       {/* Diff Header */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-[#050505] text-xs font-semibold text-neutral-500 select-none">
         <span>Inline Diff View</span>
@@ -491,61 +491,75 @@ export default function Home() {
     <div className="flex flex-col md:flex-row min-h-screen bg-white text-neutral-900 dark:bg-black dark:text-neutral-50 transition-colors duration-150">
 
       {/* LEFT SIDEBAR NAVIGATION */}
-      <aside className="w-full md:w-64 border-b md:border-b-0 md:border-r border-neutral-200 dark:border-neutral-800 flex flex-col p-6 shrink-0 bg-neutral-50/50 dark:bg-black">
+      <aside className="w-full md:w-64 border-b md:border-b-0 md:border-r border-neutral-200 dark:border-neutral-800 flex flex-col p-4 md:p-6 shrink-0 bg-neutral-50/50 dark:bg-black gap-3 md:gap-0">
 
-        <div className="mb-8">
+        {/* Brand logo & theme switch layout */}
+        <div className="flex flex-row md:flex-col justify-between md:justify-start items-center md:items-start mb-2 md:mb-8 w-full gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-black dark:bg-white rounded-md flex items-center justify-center shrink-0">
-              <span className="text-white dark:text-black font-mono font-bold text-sm">qm</span>
+            <div className="w-6 h-6 bg-black dark:bg-white rounded-md flex items-center justify-center shrink-0 active:scale-95 transition-transform duration-200">
+              <span className="text-white dark:text-black font-mono font-bold text-xs">qm</span>
             </div>
-            <h1 className="text-lg font-bold tracking-tight">quickmarker</h1>
+            <div className="flex flex-col">
+              <h1 className="text-sm md:text-lg font-bold tracking-tight">quickmarker</h1>
+              <span className="text-[9px] text-neutral-500 md:hidden leading-none">by Vijay Dhyani</span>
+            </div>
           </div>
 
+          {/* Theme Toggle (Mobile Only) */}
+          <div className="flex items-center gap-2 md:hidden">
+            <button
+              onClick={toggleTheme}
+              className="p-1.5 rounded-md border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-900 text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 active:scale-90 transition-all hover:rotate-12 duration-200"
+              aria-label="Toggle Theme"
+            >
+              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+          </div>
         </div>
 
         {/* Navigation Tabs */}
-        <nav className="space-y-1.5 flex-1">
+        <nav className="flex flex-row md:flex-col gap-1 md:gap-1.5 overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-none whitespace-nowrap w-full md:flex-1">
           <button
             onClick={() => setActiveTab('generator')}
-            className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'generator'
-              ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-black'
+            className={`flex-1 md:flex-none flex items-center justify-center md:justify-start gap-2 px-3 py-2 rounded-md text-xs md:text-sm font-medium transition-all duration-200 active:scale-98 ${activeTab === 'generator'
+              ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-black shadow-xs font-semibold'
               : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 hover:bg-neutral-100 dark:hover:bg-neutral-900/50'
               }`}
           >
-            <Wand2 className="w-4 h-4" />
+            <Wand2 className="w-3.5 h-3.5 md:w-4 md:h-4 shrink-0" />
             Logic Generator
           </button>
 
           <button
             onClick={() => setActiveTab('modifier')}
-            className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'modifier'
-              ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-black'
+            className={`flex-1 md:flex-none flex items-center justify-center md:justify-start gap-2 px-3 py-2 rounded-md text-xs md:text-sm font-medium transition-all duration-200 active:scale-98 ${activeTab === 'modifier'
+              ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-black shadow-xs font-semibold'
               : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 hover:bg-neutral-100 dark:hover:bg-neutral-900/50'
               }`}
           >
-            <Code2 className="w-4 h-4" />
+            <Code2 className="w-3.5 h-3.5 md:w-4 md:h-4 shrink-0" />
             Code Modifier
           </button>
 
           <button
             onClick={() => setActiveTab('auditor')}
-            className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'auditor'
-              ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-black'
+            className={`flex-1 md:flex-none flex items-center justify-center md:justify-start gap-2 px-3 py-2 rounded-md text-xs md:text-sm font-medium transition-all duration-200 active:scale-98 ${activeTab === 'auditor'
+              ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-black shadow-xs font-semibold'
               : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 hover:bg-neutral-100 dark:hover:bg-neutral-900/50'
               }`}
           >
-            <ShieldAlert className="w-4 h-4" />
+            <ShieldAlert className="w-3.5 h-3.5 md:w-4 md:h-4 shrink-0" />
             Auditor & Linter
           </button>
         </nav>
 
-        {/* Theme and Mode Info Footer */}
-        <div className="mt-auto pt-6 border-t border-neutral-200 dark:border-neutral-800 space-y-4">
+        {/* Theme and Mode Info Footer (Desktop Only) */}
+        <div className="hidden md:flex flex-col mt-auto pt-6 border-t border-neutral-200 dark:border-neutral-800 space-y-4 w-full">
           <div className="flex items-center justify-between">
             <span className="text-xs text-neutral-500">Theme</span>
             <button
               onClick={toggleTheme}
-              className="p-1.5 rounded-md border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-900 text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 transition-colors"
+              className="p-1.5 rounded-md border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-900 text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 active:scale-95 transition-all hover:rotate-12 duration-200"
               aria-label="Toggle Theme"
             >
               {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -565,11 +579,11 @@ export default function Home() {
       </aside>
 
       {/* MAIN CONTENT AREA */}
-      <main className="flex-1 p-6 md:p-10 max-w-6xl overflow-y-auto">
+      <main className="flex-1 p-4 sm:p-6 md:p-10 max-w-6xl overflow-y-auto">
 
         {/* TAB 1: LOGIC GENERATOR */}
         {activeTab === 'generator' && (
-          <div className="space-y-6">
+          <div className="space-y-6 animate-fade-in">
 
             {/* Header info */}
             <div>
@@ -583,17 +597,17 @@ export default function Home() {
             </div>
 
             {/* Presets Row */}
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-neutral-500">Try examples:</span>
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-2 px-2 scrollbar-none whitespace-nowrap">
+              <span className="text-xs text-neutral-500 shrink-0">Try examples:</span>
               <button
                 onClick={() => loadGeneratorPreset('promo')}
-                className="px-2.5 py-1 text-xs border border-neutral-200 dark:border-neutral-800 rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors font-medium"
+                className="px-2.5 py-1 text-xs border border-neutral-200 dark:border-neutral-800 rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-900 font-medium active:scale-95 hover:border-neutral-400 dark:hover:border-neutral-600 transition-all duration-200 hover:-translate-y-0.5 shrink-0"
               >
                 Promo Announcement
               </button>
               <button
                 onClick={() => loadGeneratorPreset('cart')}
-                className="px-2.5 py-1 text-xs border border-neutral-200 dark:border-neutral-800 rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors font-medium"
+                className="px-2.5 py-1 text-xs border border-neutral-200 dark:border-neutral-800 rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-900 font-medium active:scale-95 hover:border-neutral-400 dark:hover:border-neutral-600 transition-all duration-200 hover:-translate-y-0.5 shrink-0"
               >
                 Abandoned Cart Loop
               </button>
@@ -661,7 +675,7 @@ export default function Home() {
                   <button
                     onClick={handleGenerate}
                     disabled={generatorLoading}
-                    className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-white dark:hover:bg-neutral-100 dark:text-black transition-colors disabled:opacity-50"
+                    className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-white dark:hover:bg-neutral-100 dark:text-black active:scale-95 transition-all duration-200 hover:shadow-md disabled:opacity-50 disabled:pointer-events-none disabled:scale-100 hover:-translate-y-0.5"
                   >
                     {generatorLoading ? (
                       <>
@@ -695,7 +709,7 @@ export default function Home() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setWrapOutput(!wrapOutput)}
-                      className={`flex items-center gap-1.5 px-2 py-1 text-xs border rounded-md transition-all ${
+                      className={`flex items-center gap-1.5 px-2 py-1 text-xs border rounded-md transition-all duration-200 active:scale-95 hover:-translate-y-0.5 ${
                         wrapOutput
                           ? 'bg-neutral-900 border-neutral-900 text-white dark:bg-white dark:border-white dark:text-black font-medium'
                           : 'border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-950 text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200'
@@ -707,7 +721,7 @@ export default function Home() {
                     {generatedCode && (
                       <button
                         onClick={() => copyToClipboard(generatedCode, 'gen-output')}
-                        className="flex items-center gap-1.5 px-2 py-1 text-xs border border-neutral-200 dark:border-neutral-800 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-950 transition-all text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200"
+                        className="flex items-center gap-1.5 px-2 py-1 text-xs border border-neutral-200 dark:border-neutral-800 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-950 transition-all duration-200 text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200 active:scale-95 hover:-translate-y-0.5"
                       >
                         {copiedId === 'gen-output' ? (
                           <>
@@ -744,7 +758,7 @@ export default function Home() {
                         </button>
 
                         {showExplanation && (
-                          <div className="p-4 text-xs leading-relaxed text-neutral-600 dark:text-neutral-400 whitespace-pre-wrap font-sans">
+                          <div className="p-4 text-xs leading-relaxed text-neutral-600 dark:text-neutral-400 whitespace-pre-wrap font-sans animate-fade-in">
                             {explanationText}
                           </div>
                         )}
@@ -752,7 +766,7 @@ export default function Home() {
                     )}
                   </div>
                 ) : (
-                  <div className="h-96 border border-neutral-200 dark:border-neutral-800 rounded-md flex flex-col items-center justify-center text-neutral-400 dark:text-neutral-600 bg-neutral-50/20 dark:bg-neutral-950/20">
+                  <div className="h-72 md:h-96 border border-neutral-200 dark:border-neutral-800 rounded-md flex flex-col items-center justify-center text-neutral-400 dark:text-neutral-600 bg-neutral-50/20 dark:bg-neutral-950/20">
                     <Wand2 className="w-8 h-8 mb-2 opacity-50" />
                     <p className="text-xs font-mono">Run a prompt to see outputs...</p>
                   </div>
@@ -766,7 +780,7 @@ export default function Home() {
 
         {/* TAB 2: CODE MODIFIER */}
         {activeTab === 'modifier' && (
-          <div className="space-y-6">
+          <div className="space-y-6 animate-fade-in">
 
             {/* Header info */}
             <div>
@@ -780,17 +794,17 @@ export default function Home() {
             </div>
 
             {/* Presets Row */}
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-neutral-500">Try examples:</span>
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-2 px-2 scrollbar-none whitespace-nowrap">
+              <span className="text-xs text-neutral-500 shrink-0">Try examples:</span>
               <button
                 onClick={() => loadModifierPreset('vip')}
-                className="px-2.5 py-1 text-xs border border-neutral-200 dark:border-neutral-800 rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors font-medium"
+                className="px-2.5 py-1 text-xs border border-neutral-200 dark:border-neutral-800 rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-900 font-medium active:scale-95 hover:border-neutral-400 dark:hover:border-neutral-600 transition-all duration-200 hover:-translate-y-0.5 shrink-0"
               >
                 Add VIP Conditional Check
               </button>
               <button
                 onClick={() => loadModifierPreset('border')}
-                className="px-2.5 py-1 text-xs border border-neutral-200 dark:border-neutral-800 rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors font-medium"
+                className="px-2.5 py-1 text-xs border border-neutral-200 dark:border-neutral-800 rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-900 font-medium active:scale-95 hover:border-neutral-400 dark:hover:border-neutral-600 transition-all duration-200 hover:-translate-y-0.5 shrink-0"
               >
                 Wrap in Layout Border Table
               </button>
@@ -830,7 +844,7 @@ export default function Home() {
                   <button
                     onClick={handleModify}
                     disabled={modifierLoading}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-semibold bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-white dark:hover:bg-neutral-100 dark:text-black transition-colors disabled:opacity-50"
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-semibold bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-white dark:hover:bg-neutral-100 dark:text-black active:scale-95 transition-all duration-200 hover:shadow-md disabled:opacity-50 disabled:pointer-events-none disabled:scale-100 hover:-translate-y-0.5"
                   >
                     {modifierLoading ? (
                       <>
@@ -864,7 +878,7 @@ export default function Home() {
                   {modifierModifiedCode && (
                     <button
                       onClick={() => copyToClipboard(modifierModifiedCode, 'modifier-output')}
-                      className="flex items-center gap-1.5 px-2 py-1 text-xs border border-neutral-200 dark:border-neutral-800 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-950 transition-all text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200"
+                      className="flex items-center gap-1.5 px-2 py-1 text-xs border border-neutral-200 dark:border-neutral-800 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-950 transition-all duration-200 text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200 active:scale-95 hover:-translate-y-0.5"
                     >
                       {copiedId === 'modifier-output' ? (
                         <>
@@ -884,7 +898,7 @@ export default function Home() {
                 {modifierModifiedCode ? (
                   <DiffViewer oldCode={modifierOriginalCode} newCode={modifierModifiedCode} />
                 ) : (
-                  <div className="h-[490px] border border-neutral-200 dark:border-neutral-800 rounded-md flex flex-col items-center justify-center text-neutral-400 dark:text-neutral-600 bg-neutral-50/20 dark:bg-neutral-950/20">
+                  <div className="h-[360px] md:h-[490px] border border-neutral-200 dark:border-neutral-800 rounded-md flex flex-col items-center justify-center text-neutral-400 dark:text-neutral-600 bg-neutral-50/20 dark:bg-neutral-950/20">
                     <Code2 className="w-8 h-8 mb-2 opacity-50" />
                     <p className="text-xs font-mono">Apply instructions to view modified output diffs...</p>
                   </div>
@@ -897,7 +911,7 @@ export default function Home() {
 
         {/* TAB 3: AUDITOR & LINTER */}
         {activeTab === 'auditor' && (
-          <div className="space-y-6">
+          <div className="space-y-6 animate-fade-in">
 
             {/* Header info */}
             <div>
@@ -911,23 +925,23 @@ export default function Home() {
             </div>
 
             {/* Presets Row */}
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-neutral-500">Inject broken code:</span>
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-2 px-2 scrollbar-none whitespace-nowrap">
+              <span className="text-xs text-neutral-500 shrink-0">Inject broken code:</span>
               <button
                 onClick={() => loadAuditorPreset('syntax')}
-                className="px-2.5 py-1 text-xs border border-neutral-200 dark:border-neutral-800 rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors font-medium text-red-600 dark:text-red-400"
+                className="px-2.5 py-1 text-xs border border-neutral-200 dark:border-neutral-800 rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-900 font-medium text-red-600 dark:text-red-400 active:scale-95 hover:border-red-400 dark:hover:border-red-600 transition-all duration-200 hover:-translate-y-0.5 shrink-0"
               >
                 Missing Closing Tag
               </button>
               <button
                 onClick={() => loadAuditorPreset('safety')}
-                className="px-2.5 py-1 text-xs border border-neutral-200 dark:border-neutral-800 rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors font-medium text-amber-600 dark:text-amber-400"
+                className="px-2.5 py-1 text-xs border border-neutral-200 dark:border-neutral-800 rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-900 font-medium text-amber-600 dark:text-amber-400 active:scale-95 hover:border-amber-400 dark:hover:border-amber-600 transition-all duration-200 hover:-translate-y-0.5 shrink-0"
               >
                 Missing Null-Safety
               </button>
               <button
                 onClick={() => loadAuditorPreset('perf')}
-                className="px-2.5 py-1 text-xs border border-neutral-200 dark:border-neutral-800 rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors font-medium text-blue-600 dark:text-blue-400"
+                className="px-2.5 py-1 text-xs border border-neutral-200 dark:border-neutral-800 rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-900 font-medium text-blue-600 dark:text-blue-400 active:scale-95 hover:border-blue-400 dark:hover:border-blue-600 transition-all duration-200 hover:-translate-y-0.5 shrink-0"
               >
                 Inline Filtering Loop
               </button>
@@ -945,7 +959,7 @@ export default function Home() {
                 <button
                   onClick={handleAudit}
                   disabled={auditorLoading}
-                  className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-white dark:hover:bg-neutral-100 dark:text-black transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-white dark:hover:bg-neutral-100 dark:text-black active:scale-95 transition-all duration-200 hover:shadow-md disabled:opacity-50 disabled:pointer-events-none disabled:scale-100 hover:-translate-y-0.5"
                 >
                   {auditorLoading ? (
                     <>
@@ -1049,6 +1063,18 @@ export default function Home() {
 
           </div>
         )}
+
+        {/* Mobile Footer */}
+        <footer className="mt-12 pt-6 border-t border-neutral-200 dark:border-neutral-800 flex flex-col items-center gap-2 md:hidden">
+          <div className="text-[9px] text-neutral-400 dark:text-neutral-600 font-mono tracking-wider">
+            2026 @ BY VIJAY DHYANI
+          </div>
+          {isMockMode && (
+            <p className="text-[10px] text-neutral-500 leading-normal text-center">
+              No API Key detected. Currently falling back to sandbox outputs.
+            </p>
+          )}
+        </footer>
 
       </main>
 

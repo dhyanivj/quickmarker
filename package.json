@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "deploy": "gcloud run deploy quickmarker --source . --project starry-hawk-497801-t4 --region us-east4"
   },
   "dependencies": {
     "@google/genai": "^2.10.0",
