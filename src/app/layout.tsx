@@ -18,7 +18,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "FreeMarker Email Developer Suite - AI-Powered Logic & Audit Tool",
+  title: "Quickmarker - AI-Powered FreeMarker Email Developer Suite",
   description: "Generate, translate, and audit Apache FreeMarker logic for production-ready HTML emails. Vercel-inspired monochrome developer environment.",
   keywords: ["FreeMarker", "Email Developer", "Liquid to FreeMarker", "AMPScript to FreeMarker", "FreeMarker Linter", "AI Code Generator"],
   authors: [{ name: "Antigravity AI" }],
@@ -52,7 +52,8 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col bg-background text-foreground transition-colors duration-150">
+      <body className="min-h-full flex flex-col bg-background text-foreground transition-colors duration-150" cz-shortcut-listen="true"
+      >
         {children}
       </body>
     </html>
