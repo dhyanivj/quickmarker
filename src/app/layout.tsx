@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -12,12 +12,16 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
 export const metadata: Metadata = {
-  title: "FreeMarker Email Developer Suite - AI-Powered Logic & Audit Tool",
+  title: "Quickmarker - AI-Powered FreeMarker Email Developer Suite",
   description: "Generate, translate, and audit Apache FreeMarker logic for production-ready HTML emails. Vercel-inspired monochrome developer environment.",
   keywords: ["FreeMarker", "Email Developer", "Liquid to FreeMarker", "AMPScript to FreeMarker", "FreeMarker Linter", "AI Code Generator"],
   authors: [{ name: "Antigravity AI" }],
-  viewport: "width=device-width, initial-scale=1",
 };
 
 export default function RootLayout({
@@ -48,7 +52,8 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col bg-background text-foreground transition-colors duration-150">
+      <body className="min-h-full flex flex-col bg-background text-foreground transition-colors duration-150" cz-shortcut-listen="true"
+      >
         {children}
       </body>
     </html>

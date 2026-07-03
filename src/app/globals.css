@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #111111;
@@ -20,6 +22,12 @@
   --border: #e4e4e7;
   --input: #e4e4e7;
   --ring: #18181b;
+  --sidebar-bg: #f9f9fb;
+  --panel-bg: #fafafc;
+  --orb-1: rgba(120, 120, 200, 0.06);
+  --orb-2: rgba(80, 160, 180, 0.05);
+  --orb-3: rgba(180, 120, 200, 0.04);
+  --grid-color: rgba(0, 0, 0, 0.03);
 }
 
 /* Enforce dark mode when system preferences is dark OR when .dark class is on html */
@@ -44,6 +52,12 @@
     --border: #27272a;
     --input: #27272a;
     --ring: #d4d4d8;
+    --sidebar-bg: #050508;
+    --panel-bg: #07070a;
+    --orb-1: rgba(100, 100, 220, 0.07);
+    --orb-2: rgba(60, 140, 180, 0.06);
+    --orb-3: rgba(160, 80, 200, 0.05);
+    --grid-color: rgba(255, 255, 255, 0.025);
   }
 }
 
@@ -67,6 +81,12 @@
   --border: #27272a;
   --input: #27272a;
   --ring: #d4d4d8;
+  --sidebar-bg: #050508;
+  --panel-bg: #07070a;
+  --orb-1: rgba(100, 100, 220, 0.07);
+  --orb-2: rgba(60, 140, 180, 0.06);
+  --orb-3: rgba(160, 80, 200, 0.05);
+  --grid-color: rgba(255, 255, 255, 0.025);
 }
 
 @theme {
@@ -100,18 +120,210 @@ body {
   font-family: var(--font-sans);
 }
 
-/* Custom scrollbars for a clean tech UI look */
+/* Custom scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
   background: var(--border);
-  border-radius: 3px;
+  border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--muted-foreground);
 }
+
+/* ─── Animations ─────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes popIn {
+  0%   { transform: scale(0.94); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulse-slow {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 0.7; }
+}
+
+/* Floating orbs */
+@keyframes orbFloat1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%       { transform: translate(3%, 2%) scale(1.04); }
+  66%       { transform: translate(-2%, 3%) scale(0.97); }
+}
+
+@keyframes orbFloat2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%       { transform: translate(-3%, -2%) scale(1.05); }
+  66%       { transform: translate(2%, -3%) scale(0.96); }
+}
+
+@keyframes orbFloat3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%       { transform: translate(4%, -4%) scale(1.06); }
+}
+
+/* Nav indicator slide */
+@keyframes navIndicator {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+/* Spinner dots */
+@keyframes dotBounce {
+  0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; }
+  40%            { transform: scale(1);   opacity: 1; }
+}
+
+/* Subtle glow pulse for active states */
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); }
+  50%       { box-shadow: 0 0 12px 2px rgba(100,100,255,0.08); }
+}
+
+/* ─── Utility classes ─────────────────────────────────────── */
+.animate-fade-in {
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-pop-in {
+  animation: popIn 0.18s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.animate-slide-left {
+  animation: slideInLeft 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-slide-right {
+  animation: slideInRight 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 3s ease-in-out infinite;
+}
+
+.orb-1 {
+  animation: orbFloat1 18s ease-in-out infinite;
+}
+.orb-2 {
+  animation: orbFloat2 22s ease-in-out infinite;
+}
+.orb-3 {
+  animation: orbFloat3 26s ease-in-out infinite;
+}
+
+/* Stagger helpers for lists */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.10s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.20s; }
+
+/* Shimmer loading skeleton */
+.shimmer {
+  background: linear-gradient(90deg,
+    var(--muted) 25%,
+    var(--accent) 50%,
+    var(--muted) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Active nav glow */
+.nav-active-glow {
+  animation: glowPulse 3s ease-in-out infinite;
+}
+
+/* Hide scrollbar */
+.scrollbar-none::-webkit-scrollbar { display: none; }
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Background grid */
+.bg-grid {
+  background-image:
+    linear-gradient(var(--grid-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* Glassmorphism panel */
+.glass-panel {
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+}
+
+/* Focus ring */
+.focus-ring:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Smooth content transitions */
+.tab-content-enter {
+  animation: fadeInUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ─── FTL Syntax Highlighting ────────────────────────────── */
+/* Caret colour for transparent-text textarea overlay */
+:root  { --editor-caret: #111111; }
+.dark  { --editor-caret: #e2e8f0; }
+
+/* Light mode tokens */
+.hl-comment  { color: #9ca3af; font-style: italic; }
+.hl-ftl      { color: #1d4ed8; font-weight: 600; }   /* blue-700 – <#if> </#list> */
+.hl-ftl-expr { color: #2563eb; }                     /* blue-600 – content inside FTL tag */
+.hl-interp   { color: #b45309; font-weight: 500; }   /* amber-700 – ${...} */
+.hl-tag      { color: #15803d; }                     /* green-700 – < > / */
+.hl-tag-name { color: #15803d; font-weight: 600; }   /* green-700 – tag name */
+.hl-attr     { color: #0369a1; }                     /* sky-700 – attribute name */
+.hl-eq       { color: #374151; }                     /* gray-700 – = */
+.hl-str      { color: #c2410c; }                     /* orange-700 – "value" */
+
+/* Dark mode tokens */
+.dark .hl-comment  { color: #4b5563; font-style: italic; }
+.dark .hl-ftl      { color: #60a5fa; font-weight: 600; }  /* blue-400 */
+.dark .hl-ftl-expr { color: #93c5fd; }                    /* blue-300 */
+.dark .hl-interp   { color: #fbbf24; font-weight: 500; }  /* amber-400 */
+.dark .hl-tag      { color: #4ade80; }                    /* green-400 */
+.dark .hl-tag-name { color: #4ade80; font-weight: 600; }  /* green-400 */
+.dark .hl-attr     { color: #7dd3fc; }                    /* sky-300 */
+.dark .hl-eq       { color: #d1d5db; }                    /* gray-300 */
+.dark .hl-str      { color: #fb923c; }                    /* orange-400 */
+
+/* Overlay editor: keep placeholder visible through transparent textarea */
+.code-textarea::placeholder { color: #9ca3af !important; }
+.dark .code-textarea::placeholder { color: #4b5563 !important; }
