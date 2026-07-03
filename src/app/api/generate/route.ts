@@ -94,6 +94,46 @@ Instructions: "${instructions}"`;
       const responseText = response.text || '';
       return new Response(responseText, { headers: { 'Content-Type': 'application/json' } });
 
+    } else if (mode === 'preview') {
+      const systemInstruction = `You are an Apache FreeMarker template engine simulator. Given a FreeMarker template and a JSON data context, you must evaluate and render the template exactly as a real FreeMarker engine would, producing the final HTML output.
+- Evaluate all <#if>, <#else>, <#elseif>, <#list>, <#assign> and interpolation \${...} directives against the provided JSON data.
+- Apply null-safe fallback operators (!) and ?has_content built-ins correctly.
+- Return ONLY the final rendered HTML string — no commentary, no wrappers, no markdown code fences.
+- If a variable is undefined and has no fallback, leave it blank (as FreeMarker would throw — note this in the notes field instead).
+- In the notes field, list any fallback values that were used, any variables that were missing, and any conditional branches taken.
+- Return a JSON object matching the schema. DO NOT wrap in markdown code blocks.`;
+
+      const contextStr = body.context ? JSON.stringify(body.context, null, 2) : '{}';
+      const contents = `Simulate rendering this FreeMarker template with the provided data context.
+
+Template:
+\`\`\`
+${code}
+\`\`\`
+
+Data Context (JSON):
+${contextStr}`;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents,
+        config: {
+          systemInstruction,
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: 'OBJECT',
+            properties: {
+              html: { type: 'STRING', description: 'The final rendered HTML output after evaluating the FreeMarker template against the data context.' },
+              notes: { type: 'STRING', description: 'Runtime notes: fallback values used, missing variables, and which conditional branches were taken.' }
+            },
+            required: ['html']
+          }
+        }
+      });
+
+      const responseText = response.text || '';
+      return new Response(responseText, { headers: { 'Content-Type': 'application/json' } });
+
     } else if (mode === 'audit') {
       const systemInstruction = `You are a strict, world-class Apache FreeMarker compiler, auditor, and Email Developer assistant. Your job is to audit the provided FreeMarker code for syntax errors, missing closing tags (like \`</#if>\` or \`</#list>\`), missing null-safe fallback indicators (\`!\`), performance bottlenecks, and compliance with email development best practices.
 - Output a JSON object matching the JSON schema below. DO NOT wrap the JSON in markdown code blocks.`;
@@ -309,6 +349,32 @@ ${originalCode}`;
       isValid: issues.length === 0,
       issues: issues,
       isMock: true
+    };
+  } else if (mode === 'preview') {
+    const code = body.code || '';
+    // Simple mock: strip FreeMarker directives and return a skeleton output
+    const stripped = code
+      .replace(/<#[^>]+>/g, '')
+      .replace(/<\/#[^>]+>/g, '')
+      .replace(/\$\{([^}]+)\}/g, (_, expr) => {
+        // Try to resolve simple paths from context
+        const path = expr.split('!')[0].replace(/[()]/g, '').trim();
+        const parts = path.split('.');
+        let val: unknown = body.context;
+        for (const p of parts) {
+          if (val && typeof val === 'object') val = (val as Record<string, unknown>)[p];
+          else { val = undefined; break; }
+        }
+        if (val !== undefined && val !== null) return String(val);
+        // Use fallback if present
+        const fallback = expr.includes('!') ? expr.split('!').slice(1).join('!').replace(/^"(.*)"$/, '$1') : '';
+        return fallback || `[${path}]`;
+      })
+      .trim();
+    return {
+      html: stripped || '<p style="color:#666; font-family:sans-serif;">No output — add a JSON context to see rendered values.</p>',
+      notes: 'Sandbox preview mode: variable values resolved from Sample Context. Connect Vertex AI for a full simulation.',
+      isMock: true,
     };
   }
 

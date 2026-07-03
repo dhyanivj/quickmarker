@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Wand2,
   ShieldAlert,
@@ -69,6 +69,107 @@ function BackgroundCanvas() {
   );
 }
 
+// ─── FTL Syntax Highlighter ───────────────────────────────
+function escFtl(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function highlightHtmlTag(tag: string): string {
+  let r = `<span class="hl-tag">&lt;</span>`;
+  let i = 1;
+  // Optional closing slash
+  if (tag[i] === '/') { r += `<span class="hl-tag">/</span>`; i++; }
+  // Tag name
+  let j = i;
+  while (j < tag.length - 1 && !/[\s>\/]/.test(tag[j])) j++;
+  if (j > i) r += `<span class="hl-tag-name">${escFtl(tag.slice(i, j))}</span>`;
+  i = j;
+  // Attributes
+  while (i < tag.length - 1) {
+    const ch = tag[i];
+    if (/\s/.test(ch)) { r += ch; i++; continue; }
+    if (ch === '/') { r += `<span class="hl-tag">/</span>`; i++; continue; }
+    // Attribute name
+    let k = i;
+    while (k < tag.length - 1 && !/[\s=\/]/.test(tag[k])) k++;
+    if (k > i) r += `<span class="hl-attr">${escFtl(tag.slice(i, k))}</span>`;
+    i = k;
+    if (tag[i] === '=') {
+      r += `<span class="hl-eq">=</span>`; i++;
+      if (tag[i] === '"') {
+        const vs = i; i++;
+        while (i < tag.length - 1 && tag[i] !== '"') i++;
+        if (tag[i] === '"') i++;
+        r += `<span class="hl-str">${escFtl(tag.slice(vs, i))}</span>`;
+      }
+    }
+  }
+  r += `<span class="hl-tag">&gt;</span>`;
+  return r;
+}
+
+function ftlHighlight(code: string): string {
+  let r = '';
+  let i = 0;
+  while (i < code.length) {
+    // FTL comment  <#-- ... -->
+    if (code.startsWith('<#--', i)) {
+      const end = code.indexOf('-->', i + 4);
+      const s = end === -1 ? code.slice(i) : code.slice(i, end + 3);
+      r += `<span class="hl-comment">${escFtl(s)}</span>`;
+      i += s.length; continue;
+    }
+    // FTL closing directive  </#word>
+    if (code.startsWith('</#', i)) {
+      const end = code.indexOf('>', i);
+      const s = end === -1 ? code.slice(i) : code.slice(i, end + 1);
+      r += `<span class="hl-ftl">${escFtl(s)}</span>`;
+      i += s.length; continue;
+    }
+    // FTL opening directive  <#word ...>
+    if (code.startsWith('<#', i)) {
+      const end = code.indexOf('>', i);
+      if (end !== -1) {
+        const s = code.slice(i, end + 1);
+        const sp = s.search(/[\s>]/);
+        const kw   = sp === -1 ? s : s.slice(0, sp);
+        const rest = sp === -1 ? '' : s.slice(sp, -1);
+        r += `<span class="hl-ftl">${escFtl(kw)}</span>`;
+        if (rest) r += `<span class="hl-ftl-expr">${escFtl(rest)}</span>`;
+        r += `<span class="hl-ftl">&gt;</span>`;
+        i = end + 1; continue;
+      }
+    }
+    // FTL interpolation  ${...}
+    if (code.startsWith('${', i)) {
+      const end = code.indexOf('}', i + 2);
+      const s = end === -1 ? code.slice(i) : code.slice(i, end + 1);
+      r += `<span class="hl-interp">${escFtl(s)}</span>`;
+      i += s.length; continue;
+    }
+    // HTML tag  <tagname ...>
+    if (code[i] === '<' && i + 1 < code.length && /[a-zA-Z\/!]/.test(code[i + 1])) {
+      const end = code.indexOf('>', i + 1);
+      if (end !== -1) {
+        r += highlightHtmlTag(code.slice(i, end + 1));
+        i = end + 1; continue;
+      }
+    }
+    // Plain character — escape special HTML chars
+    const ch = code[i];
+    if (ch === '&') r += '&amp;';
+    else if (ch === '<') r += '&lt;';
+    else if (ch === '>') r += '&gt;';
+    else r += ch;
+    i++;
+  }
+  return r;
+}
+
 // ─── Custom Code Editor ─────────────────────────────────────
 interface CodeEditorProps {
   value: string;
@@ -79,43 +180,67 @@ interface CodeEditorProps {
 }
 
 function CodeEditor({ value, onChange, placeholder, readOnly = false, wrap = false }: CodeEditorProps) {
-  const lineCount = value.split('\n').length || 1;
+  const lineCount = Math.max(value.split('\n').length, 1);
   const lines = Array.from({ length: lineCount }, (_, i) => i + 1);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const lineNumbersRef = useRef<HTMLDivElement>(null);
+  const preRef      = useRef<HTMLPreElement>(null);
+  const lineNumRef  = useRef<HTMLDivElement>(null);
 
-  const handleScroll = () => {
-    if (textareaRef.current && lineNumbersRef.current) {
-      lineNumbersRef.current.scrollTop = textareaRef.current.scrollTop;
+  const highlighted = useMemo(() => ftlHighlight(value || ''), [value]);
+
+  const syncScroll = () => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    if (preRef.current) {
+      preRef.current.scrollTop  = ta.scrollTop;
+      preRef.current.scrollLeft = ta.scrollLeft;
     }
+    if (lineNumRef.current) lineNumRef.current.scrollTop = ta.scrollTop;
   };
 
   return (
     <div className="flex border border-neutral-200 dark:border-neutral-800 rounded-xl bg-neutral-50 dark:bg-[#080808] font-mono text-sm leading-6 overflow-hidden h-72 md:h-96 relative transition-all duration-200 hover:border-neutral-300 dark:hover:border-neutral-700 focus-within:border-neutral-400 dark:focus-within:border-neutral-600 focus-within:shadow-sm">
-      {/* Line Numbers */}
+
+      {/* Line numbers column */}
       {!wrap && (
         <div
-          ref={lineNumbersRef}
-          className="select-none text-right pr-3 pl-2 py-3 bg-neutral-100/60 dark:bg-[#030303]/70 text-neutral-400 dark:text-neutral-700 border-r border-neutral-200 dark:border-neutral-800 text-xs min-w-[2.5rem] overflow-y-hidden scrollbar-none"
+          ref={lineNumRef}
+          className="select-none text-right pr-3 pl-2 py-3 bg-neutral-100/60 dark:bg-[#030303]/70 text-neutral-400 dark:text-neutral-600 border-r border-neutral-200 dark:border-neutral-800 text-xs min-w-[2.5rem] overflow-y-hidden scrollbar-none"
           style={{ scrollbarWidth: 'none' }}
         >
           {lines.map((num) => (
-            <div key={num} className="h-6">{num}</div>
+            <div key={num} className="h-6 leading-6">{num}</div>
           ))}
         </div>
       )}
-      <textarea
-        ref={textareaRef}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onScroll={handleScroll}
-        placeholder={placeholder}
-        readOnly={readOnly}
-        spellCheck={false}
-        wrap={wrap ? 'on' : 'off'}
-        className={`flex-1 p-3 bg-transparent text-neutral-900 dark:text-neutral-100 outline-none resize-none font-mono text-sm leading-6 h-full min-w-0 placeholder:text-neutral-400 dark:placeholder:text-neutral-700 ${wrap ? 'whitespace-pre-wrap overflow-y-auto' : 'whitespace-pre overflow-auto'
+
+      {/* Highlight + textarea overlay */}
+      <div className="relative flex-1 min-w-0 overflow-hidden">
+        {/* Highlighted <pre> sits behind the textarea */}
+        <pre
+          ref={preRef}
+          aria-hidden
+          className={`absolute inset-0 p-3 m-0 font-mono text-sm leading-6 pointer-events-none select-none overflow-hidden ${
+            wrap ? 'whitespace-pre-wrap break-words' : 'whitespace-pre'
           }`}
-      />
+          dangerouslySetInnerHTML={{ __html: highlighted + '\n' }}
+        />
+        {/* Transparent textarea on top — captures all input and scroll */}
+        <textarea
+          ref={textareaRef}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onScroll={syncScroll}
+          placeholder={placeholder}
+          readOnly={readOnly}
+          spellCheck={false}
+          wrap={wrap ? 'on' : 'off'}
+          className={`code-textarea absolute inset-0 p-3 bg-transparent outline-none resize-none font-mono text-sm leading-6 w-full h-full ${
+            wrap ? 'whitespace-pre-wrap overflow-y-auto' : 'whitespace-pre overflow-auto'
+          } ${readOnly ? 'cursor-default' : ''}`}
+          style={{ color: 'transparent', caretColor: 'var(--editor-caret)' }}
+        />
+      </div>
     </div>
   );
 }
@@ -128,15 +253,26 @@ interface DiffChange {
   newLineNum?: number;
 }
 
-function calculateDiff(oldStr: string, newStr: string): DiffChange[] {
-  const oldLines = oldStr.split('\n');
-  const newLines = newStr.split('\n');
-  const dp: number[][] = Array(oldLines.length + 1)
-    .fill(null)
-    .map(() => Array(newLines.length + 1).fill(0));
+// Strip trailing empty lines so a trailing newline doesn't produce a phantom diff
+function normaliseLines(str: string): string[] {
+  const lines = str.split('\n');
+  while (lines.length > 0 && lines[lines.length - 1].trim() === '') lines.pop();
+  return lines;
+}
 
-  for (let i = 1; i <= oldLines.length; i++) {
-    for (let j = 1; j <= newLines.length; j++) {
+function calculateDiff(oldStr: string, newStr: string): DiffChange[] {
+  const oldLines = normaliseLines(oldStr);
+  const newLines = normaliseLines(newStr);
+
+  // Build LCS table
+  const m = oldLines.length;
+  const n = newLines.length;
+  const dp: number[][] = Array(m + 1)
+    .fill(null)
+    .map(() => Array(n + 1).fill(0));
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
       if (oldLines[i - 1] === newLines[j - 1]) {
         dp[i][j] = dp[i - 1][j - 1] + 1;
       } else {
@@ -145,9 +281,10 @@ function calculateDiff(oldStr: string, newStr: string): DiffChange[] {
     }
   }
 
+  // Backtrack to reconstruct diff
   const result: DiffChange[] = [];
-  let i = oldLines.length;
-  let j = newLines.length;
+  let i = m;
+  let j = n;
 
   while (i > 0 || j > 0) {
     if (i > 0 && j > 0 && oldLines[i - 1] === newLines[j - 1]) {
@@ -222,7 +359,130 @@ function DiffViewer({ oldCode, newCode, wrap = false }: DiffViewerProps) {
   );
 }
 
-// ─── Preset Chip ───────────────────────────────────────────
+
+// ─── Spreadsheet Grid ─────────────────────────────────────
+const GRID_COLS = 6;
+const GRID_ROWS = 5;
+
+function emptyGrid(): string[][] {
+  return Array.from({ length: GRID_ROWS + 1 }, (_, r) =>
+    Array.from({ length: GRID_COLS }, () => r === 0 ? '' : '')
+  );
+}
+
+function gridToJson(grid: string[][]): string {
+  const headers = grid[0].map((h) => h.trim());
+  const activeHeaders = headers.filter(Boolean);
+  if (activeHeaders.length === 0) return '';
+
+  const rows = grid.slice(1).filter((row) => row.some((cell) => cell.trim() !== ''));
+  if (rows.length === 0) {
+    // No data rows — return object with header keys as empty
+    const obj: Record<string, string> = {};
+    activeHeaders.forEach((h) => (obj[h] = ''));
+    return JSON.stringify(obj, null, 2);
+  }
+
+  if (rows.length === 1) {
+    // Single row — return flat object
+    const obj: Record<string, string> = {};
+    activeHeaders.forEach((h, i) => { obj[h] = rows[0][i]?.trim() ?? ''; });
+    return JSON.stringify(obj, null, 2);
+  }
+
+  // Multiple rows — return { data: [...] }
+  const arr = rows.map((row) => {
+    const obj: Record<string, string> = {};
+    activeHeaders.forEach((h, i) => { obj[h] = row[i]?.trim() ?? ''; });
+    return obj;
+  });
+  return JSON.stringify({ data: arr }, null, 2);
+}
+
+interface SpreadsheetGridProps {
+  grid: string[][];
+  onChange: (grid: string[][], json: string) => void;
+}
+
+function SpreadsheetGrid({ grid, onChange }: SpreadsheetGridProps) {
+  const activeColCount = Math.max(
+    GRID_COLS,
+    grid[0].findLastIndex((h) => h.trim() !== '') + 2,
+    GRID_COLS
+  );
+  const visibleCols = Math.min(activeColCount, GRID_COLS);
+
+  const update = (r: number, c: number, val: string) => {
+    const next = grid.map((row) => [...row]);
+    next[r][c] = val;
+    onChange(next, gridToJson(next));
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, r: number, c: number) => {
+    const el = (row: number, col: number) =>
+      document.getElementById(`cell-${row}-${col}`) as HTMLInputElement | null;
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const nextCol = c + 1 < visibleCols ? c + 1 : 0;
+      const nextRow = c + 1 < visibleCols ? r : r + 1 <= GRID_ROWS ? r + 1 : 0;
+      el(nextRow, nextCol)?.focus();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (r < GRID_ROWS) el(r + 1, c)?.focus();
+    } else if (e.key === 'ArrowDown' && r < GRID_ROWS) { e.preventDefault(); el(r + 1, c)?.focus(); }
+    else if (e.key === 'ArrowUp' && r > 0) { e.preventDefault(); el(r - 1, c)?.focus(); }
+    else if (e.key === 'ArrowRight' && c < visibleCols - 1) { e.preventDefault(); el(r, c + 1)?.focus(); }
+    else if (e.key === 'ArrowLeft' && c > 0) { e.preventDefault(); el(r, c - 1)?.focus(); }
+  };
+
+  return (
+    <div className="overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
+      <table className="border-collapse text-xs w-full">
+        <tbody>
+          {grid.slice(0, GRID_ROWS + 1).map((row, r) => (
+            <tr key={r}>
+              {/* Row label */}
+              <td className="select-none text-center text-neutral-400 dark:text-neutral-600 font-mono text-[10px] w-6 bg-neutral-100/60 dark:bg-neutral-900/60 border-r border-neutral-200 dark:border-neutral-800">
+                {r === 0 ? '#' : r}
+              </td>
+              {row.slice(0, visibleCols).map((cell, c) => (
+                <td
+                  key={c}
+                  className={`border-r border-b border-neutral-200 dark:border-neutral-800 last:border-r-0 p-0 ${
+                    r === 0
+                      ? 'bg-neutral-100/80 dark:bg-neutral-900/80'
+                      : 'bg-white/60 dark:bg-neutral-950/40'
+                  }`}
+                >
+                  <input
+                    id={`cell-${r}-${c}`}
+                    type="text"
+                    value={cell}
+                    onChange={(e) => update(r, c, e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(e, r, c)}
+                    placeholder={r === 0 ? `col ${c + 1}` : ''}
+                    className={`w-full min-w-[72px] px-2 py-1.5 bg-transparent outline-none font-mono transition-colors focus:bg-blue-50/60 dark:focus:bg-blue-950/20 placeholder:text-neutral-300 dark:placeholder:text-neutral-700 ${
+                      r === 0
+                        ? 'font-semibold text-neutral-700 dark:text-neutral-300'
+                        : 'text-neutral-800 dark:text-neutral-200'
+                    }`}
+                  />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="px-3 py-1.5 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50/60 dark:bg-neutral-900/40 flex items-center gap-2">
+        <span className="text-[10px] text-neutral-400 dark:text-neutral-600 font-mono">
+          Row 1 = headers · Tab/Arrow keys to navigate · auto-converts to JSON
+        </span>
+      </div>
+    </div>
+  );
+}
+
+
 function PresetChip({ onClick, children, variant = 'default' }: {
   onClick: () => void;
   children: React.ReactNode;
@@ -321,6 +581,8 @@ export default function Home() {
   // Tab 1: Logic Generator
   const [prompt, setPrompt] = useState('');
   const [jsonContext, setJsonContext] = useState('');
+  const [contextInputMode, setContextInputMode] = useState<'json' | 'sheet'>('json');
+  const [spreadsheetGrid, setSpreadsheetGrid] = useState<string[][]>(emptyGrid);
   const [explain, setExplain] = useState(true);
   const [showExplanation, setShowExplanation] = useState(false);
   const [isContextCollapsed, setIsContextCollapsed] = useState(true);
@@ -329,6 +591,14 @@ export default function Home() {
   const [generatorLoading, setGeneratorLoading] = useState(false);
   const [generatorError, setGeneratorError] = useState('');
   const [wrapOutput, setWrapOutput] = useState(true);
+
+  // Preview
+  const [previewHtml, setPreviewHtml] = useState('');
+  const [previewNotes, setPreviewNotes] = useState('');
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState('');
+  const [previewTab, setPreviewTab] = useState<'rendered' | 'html'>('rendered');
+  const [showPreview, setShowPreview] = useState(false);
 
   // Tab 2: Code Modifier
   const [modifierOriginalCode, setModifierOriginalCode] = useState('');
@@ -448,6 +718,9 @@ export default function Home() {
     setGeneratorError('');
     setGeneratedCode('');
     setExplanationText('');
+    setPreviewHtml('');
+    setPreviewNotes('');
+    setShowPreview(false);
 
     let parsedContext = null;
     if (jsonContext.trim()) {
@@ -475,6 +748,38 @@ export default function Home() {
       setGeneratorError(err instanceof Error ? err.message : 'An error occurred during code generation.');
     } finally {
       setGeneratorLoading(false);
+    }
+  };
+
+  const handlePreview = async () => {
+    if (!generatedCode.trim()) return;
+    setPreviewLoading(true);
+    setPreviewError('');
+    setPreviewHtml('');
+    setPreviewNotes('');
+    setShowPreview(true);
+
+    let parsedContext = null;
+    if (jsonContext.trim()) {
+      try { parsedContext = JSON.parse(jsonContext); } catch { /* ignore */ }
+    }
+
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'preview', code: generatedCode, context: parsedContext }),
+      });
+      if (!res.ok) throw new Error(`API error: ${res.statusText}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setPreviewHtml(data.html || '');
+      setPreviewNotes(data.notes || '');
+      setIsMockMode(!!data.isMock);
+    } catch (err: unknown) {
+      setPreviewError(err instanceof Error ? err.message : 'Preview generation failed.');
+    } finally {
+      setPreviewLoading(false);
     }
   };
 
@@ -573,9 +878,11 @@ export default function Home() {
             <div className="w-7 h-7 bg-neutral-900 dark:bg-white rounded-lg flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-105 group-hover:rotate-3 group-hover:shadow-md">
               <span className="text-white dark:text-black font-mono font-bold text-xs tracking-tighter">qm</span>
             </div>
-            <div className="flex flex-col gap-0">
-              <h1 className="text-sm font-bold tracking-tight leading-none">quickmarker</h1>
-
+            <div className="flex flex-col gap-0.5">
+              <div className="flex items-center gap-1.5 leading-none">
+                <h1 className="text-sm font-bold tracking-tight leading-none">quickmarker</h1>
+                <span className="text-[9px] font-light tracking-widest uppercase text-neutral-400 dark:text-neutral-500 leading-none mt-px">BETA</span>
+              </div>
             </div>
           </div>
 
@@ -639,7 +946,7 @@ export default function Home() {
             </div>
           )}
 
-          <div className="text-[9px] text-neutral-400 dark:text-neutral-700 font-mono tracking-widest uppercase">
+          <div className="text-[10px] text-neutral-900 dark:text-white font-semibold font-mono tracking-widest uppercase">
             2026 · Vijay Dhyani
           </div>
         </div>
@@ -695,7 +1002,7 @@ export default function Home() {
                   >
                     <div className="flex items-center gap-2">
                       <Database className="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-600" />
-                      <span>Sample JSON Context <span className="text-neutral-400 font-normal">(Optional)</span></span>
+                      <span>Sample Context <span className="text-neutral-400 font-normal">(Optional)</span></span>
                     </div>
                     <div className={`transition-transform duration-200 ${isContextCollapsed ? '' : 'rotate-180'}`}>
                       <ChevronDown className="w-4 h-4 text-neutral-400" />
@@ -703,17 +1010,64 @@ export default function Home() {
                   </button>
 
                   {!isContextCollapsed && (
-                    <div className="px-4 pb-4 space-y-2 animate-fade-in border-t border-neutral-100 dark:border-neutral-800/50 pt-3">
-                      <p className="text-[11px] text-neutral-500 leading-relaxed">
-                        Paste your data structure. The generator will align field names (e.g., <code className="font-mono text-neutral-800 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded-md">user.premium</code>) in the output.
-                      </p>
-                      <textarea
-                        value={jsonContext}
-                        onChange={(e) => setJsonContext(e.target.value)}
-                        placeholder={`{\n  "user": {\n    "premium": true,\n    "status": "active"\n  }\n}`}
-                        rows={6}
-                        className="w-full border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 focus:border-neutral-400 dark:focus:border-neutral-600 outline-none rounded-lg p-3 font-mono text-xs transition-all duration-200 placeholder:text-neutral-400 dark:placeholder:text-neutral-700 resize-none"
-                      />
+                    <div className="px-4 pb-4 space-y-3 animate-fade-in border-t border-neutral-100 dark:border-neutral-800/50 pt-3">
+                      {/* Mode tabs */}
+                      <div className="flex items-center gap-1 p-1 bg-neutral-100 dark:bg-neutral-900 rounded-lg w-fit">
+                        <button
+                          onClick={() => setContextInputMode('json')}
+                          className={`px-3 py-1 text-[11px] font-semibold rounded-md transition-all duration-150 ${
+                            contextInputMode === 'json'
+                              ? 'bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 shadow-sm'
+                              : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
+                          }`}
+                        >
+                          JSON
+                        </button>
+                        <button
+                          onClick={() => setContextInputMode('sheet')}
+                          className={`px-3 py-1 text-[11px] font-semibold rounded-md transition-all duration-150 ${
+                            contextInputMode === 'sheet'
+                              ? 'bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 shadow-sm'
+                              : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
+                          }`}
+                        >
+                          Spreadsheet
+                        </button>
+                      </div>
+
+                      {contextInputMode === 'json' ? (
+                        <>
+                          <p className="text-[11px] text-neutral-500 leading-relaxed">
+                            Paste your data structure. The generator will align field names (e.g., <code className="font-mono text-neutral-800 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded-md">user.premium</code>) in the output.
+                          </p>
+                          <textarea
+                            value={jsonContext}
+                            onChange={(e) => setJsonContext(e.target.value)}
+                            placeholder={`{\n  "user": {\n    "premium": true,\n    "status": "active"\n  }\n}`}
+                            rows={6}
+                            className="w-full border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 focus:border-neutral-400 dark:focus:border-neutral-600 outline-none rounded-lg p-3 font-mono text-xs transition-all duration-200 placeholder:text-neutral-400 dark:placeholder:text-neutral-700 resize-none"
+                          />
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-[11px] text-neutral-500 leading-relaxed">
+                            Type column headers in the first row, values below. Auto-converts to JSON context.
+                          </p>
+                          <SpreadsheetGrid
+                            grid={spreadsheetGrid}
+                            onChange={(newGrid, json) => {
+                              setSpreadsheetGrid(newGrid);
+                              if (json) setJsonContext(json);
+                            }}
+                          />
+                          {jsonContext && (
+                            <div className="rounded-lg bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-800 p-2.5">
+                              <p className="text-[10px] font-mono text-neutral-400 dark:text-neutral-600 mb-1 uppercase tracking-wider">Generated JSON</p>
+                              <pre className="text-[10px] font-mono text-neutral-700 dark:text-neutral-400 overflow-x-auto whitespace-pre-wrap">{jsonContext}</pre>
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
                   )}
                 </SectionCard>
@@ -766,6 +1120,110 @@ export default function Home() {
                 {generatedCode ? (
                   <div className="space-y-4 animate-fade-in">
                     <CodeEditor value={generatedCode} onChange={setGeneratedCode} readOnly wrap={wrapOutput} />
+
+                    {/* Preview Output */}
+                    <SectionCard>
+                      <div className="flex items-center justify-between px-4 py-3">
+                        <button
+                          onClick={() => setShowPreview(!showPreview)}
+                          className="flex items-center gap-2 text-xs font-semibold text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors"
+                        >
+                          <Play className="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-600" />
+                          Preview Output
+                          <div className={`transition-transform duration-200 ${showPreview ? 'rotate-180' : ''}`}>
+                            <ChevronDown className="w-4 h-4 text-neutral-400" />
+                          </div>
+                        </button>
+                        {generatedCode && (
+                          <ActionButton
+                            onClick={handlePreview}
+                            loading={previewLoading}
+                            loadingText="Rendering..."
+                            icon={<Sparkles className="w-3.5 h-3.5" />}
+                          >
+                            Render Preview
+                          </ActionButton>
+                        )}
+                      </div>
+
+                      {showPreview && (
+                        <div className="border-t border-neutral-100 dark:border-neutral-800/50 animate-fade-in">
+                          {previewError && (
+                            <div className="m-4 p-3 border border-red-200/60 dark:border-red-900/40 bg-red-50/60 dark:bg-red-950/20 text-red-600 dark:text-red-400 rounded-lg text-xs flex items-start gap-2">
+                              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                              <p>{previewError}</p>
+                            </div>
+                          )}
+
+                          {previewHtml && (
+                            <div className="flex flex-col">
+                              {/* Tab bar */}
+                              <div className="flex items-center gap-0.5 px-4 pt-3 pb-0">
+                                {(['rendered', 'html'] as const).map((t) => (
+                                  <button
+                                    key={t}
+                                    onClick={() => setPreviewTab(t)}
+                                    className={`px-3 py-1.5 text-[11px] font-semibold rounded-t-lg border-b-2 transition-all duration-150 ${
+                                      previewTab === t
+                                        ? 'border-neutral-900 dark:border-white text-neutral-900 dark:text-white'
+                                        : 'border-transparent text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300'
+                                    }`}
+                                  >
+                                    {t === 'rendered' ? 'Rendered' : 'Raw HTML'}
+                                  </button>
+                                ))}
+                              </div>
+
+                              {previewTab === 'rendered' ? (
+                                <div className="m-4 mt-3 rounded-xl border border-neutral-200 dark:border-neutral-700 overflow-hidden bg-white">
+                                  <div className="px-3 py-1.5 bg-neutral-100 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 flex items-center gap-1.5">
+                                    <div className="w-2 h-2 rounded-full bg-red-400/70" />
+                                    <div className="w-2 h-2 rounded-full bg-amber-400/70" />
+                                    <div className="w-2 h-2 rounded-full bg-green-400/70" />
+                                    <span className="text-[10px] text-neutral-400 font-mono ml-1">email preview</span>
+                                  </div>
+                                  <iframe
+                                    title="FreeMarker Preview"
+                                    srcDoc={previewHtml}
+                                    sandbox="allow-same-origin"
+                                    className="w-full min-h-[200px] max-h-[400px] block"
+                                    style={{ height: 'auto' }}
+                                    onLoad={(e) => {
+                                      const iframe = e.currentTarget;
+                                      try {
+                                        const h = iframe.contentDocument?.body?.scrollHeight;
+                                        if (h) iframe.style.height = Math.min(h + 24, 400) + 'px';
+                                      } catch { /* cross-origin */ }
+                                    }}
+                                  />
+                                </div>
+                              ) : (
+                                <div className="m-4 mt-3 relative">
+                                  <div className="absolute top-2 right-2 z-10">
+                                    <CopyButton text={previewHtml} id="preview-html" />
+                                  </div>
+                                  <CodeEditor value={previewHtml} onChange={() => {}} readOnly wrap />
+                                </div>
+                              )}
+
+                              {previewNotes && (
+                                <div className="mx-4 mb-4 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/30 flex items-start gap-2">
+                                  <Info className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                                  <p className="text-[11px] text-amber-700 dark:text-amber-400 leading-relaxed">{previewNotes}</p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {!previewHtml && !previewError && !previewLoading && (
+                            <div className="flex flex-col items-center justify-center gap-2 py-8 text-neutral-400 dark:text-neutral-600">
+                              <Sparkles className="w-5 h-5" />
+                              <p className="text-xs font-mono">Click &ldquo;Render Preview&rdquo; to simulate FreeMarker output</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </SectionCard>
 
                     {explanationText && (
                       <SectionCard>
